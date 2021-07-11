@@ -11,7 +11,7 @@ import (
 	"go.uber.org/zap"
 )
 
-const uri = "/users"
+const listURI = "/users"
 
 var ErrNoSuchUser = errors.New("no such user")
 
@@ -30,17 +30,17 @@ type Manager struct {
 	api    *pd.API
 }
 
-func (u *Manager) Get(ctx context.Context, email string) (*User, error) {
+func (u *Manager) GetByEmail(ctx context.Context, email string) (*User, error) {
 	params := url.Values{}
-	params.Set("query", url.QueryEscape(email))
+	params.Set("query", email)
 	params.Set("total", "false")
 	params.Set("limit", "1")
 
-	users := &getResponse{}
+	users := &listResponse{}
 
-	err := u.api.Get(ctx, uri, params, users)
+	err := u.api.Get(ctx, listURI, params, users)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get user '%s` with err: %s", email, err)
+		return nil, fmt.Errorf("failed to get user by email '%s` with err: %s", email, err)
 	}
 
 	if len(users.Users) == 0 {
@@ -55,7 +55,7 @@ func (u *Manager) Add(ctx context.Context, user NewUser, defaultTimeZone string)
 
 	respDTO := &newUserResponse{}
 
-	err := u.api.Post(ctx, uri, reqDTO, respDTO)
+	err := u.api.Post(ctx, listURI, reqDTO, respDTO)
 	if err != nil {
 		return "", fmt.Errorf("failed to add user '%#v` with err: %s", user, err)
 	}
@@ -105,7 +105,7 @@ type userFormat struct {
 	Role     string `json:"role"`
 }
 
-type getResponse struct {
+type listResponse struct {
 	Users []*User `json:"users"`
 }
 

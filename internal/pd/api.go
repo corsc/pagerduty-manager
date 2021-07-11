@@ -40,6 +40,8 @@ func (u *API) Get(ctx context.Context, uri string, params url.Values, respDTO in
 	}
 
 	req.Header.Set("Authorization", "Token token="+u.cfg.AuthToken())
+	req.Header.Set("Accept", "application/vnd.pagerduty+json;version=2")
+	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := u.client.Do(req)
 	if err != nil {
@@ -49,6 +51,9 @@ func (u *API) Get(ctx context.Context, uri string, params url.Values, respDTO in
 	defer iocloser.Close(resp.Body)
 
 	if resp.StatusCode != http.StatusOK {
+		payload, _ := ioutil.ReadAll(resp.Body)
+		u.logger.Debug("response", zap.ByteString("payload", payload))
+
 		return fmt.Errorf("unexpected HTTP GET response code: %d", resp.StatusCode)
 	}
 
@@ -71,6 +76,8 @@ func (u *API) Put(ctx context.Context, uri string, reqDTO interface{}) error {
 	}
 
 	req.Header.Set("Authorization", "Token token="+u.cfg.AuthToken())
+	req.Header.Set("Accept", "application/vnd.pagerduty+json;version=2")
+	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := u.client.Do(req) //nolint:bodyclose
 	if err != nil {
@@ -79,7 +86,10 @@ func (u *API) Put(ctx context.Context, uri string, reqDTO interface{}) error {
 
 	defer iocloser.Close(resp.Body)
 
-	if resp.StatusCode != http.StatusNoContent {
+	if resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusOK {
+		payload, _ := ioutil.ReadAll(resp.Body)
+		u.logger.Debug("response", zap.ByteString("payload", payload))
+
 		return fmt.Errorf("unexpected HTTP PUT response code: %d", resp.StatusCode)
 	}
 
@@ -102,6 +112,8 @@ func (u *API) Post(ctx context.Context, uri string, reqDTO, respDTO interface{})
 	}
 
 	req.Header.Set("Authorization", "Token token="+u.cfg.AuthToken())
+	req.Header.Set("Accept", "application/vnd.pagerduty+json;version=2")
+	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := u.client.Do(req)
 	if err != nil {
@@ -111,6 +123,9 @@ func (u *API) Post(ctx context.Context, uri string, reqDTO, respDTO interface{})
 	defer iocloser.Close(resp.Body)
 
 	if resp.StatusCode != http.StatusCreated {
+		payload, _ := ioutil.ReadAll(resp.Body)
+		u.logger.Debug("response", zap.ByteString("payload", payload))
+
 		return fmt.Errorf("unexpected HTTP PUT response code: %d", resp.StatusCode)
 	}
 
@@ -132,6 +147,8 @@ func (u *API) parseResponse(resp *http.Response, respDTO interface{}) error {
 	if err != nil {
 		return fmt.Errorf("failed to read response body with err: %w", err)
 	}
+
+	u.logger.Debug("response", zap.ByteString("payload", payload))
 
 	err = json.Unmarshal(payload, respDTO)
 	if err != nil {

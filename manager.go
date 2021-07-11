@@ -68,16 +68,16 @@ func (m *Manager) validate() error {
 	return nil
 }
 
-// SyncUsers attempts to download the existing users and create any that do not yet exist.
-// Note: existing data will not be modified in any way.
-func (m *Manager) SyncUsers(ctx context.Context) error {
-	return errors.New("not implemented")
-}
-
 // SyncTeams attempts to download the existing teams and create any that do not yet exist.
 // Note: existing data will not be modified in any way.
 // Note: creating a team also creates a matching service so we can have an `@oncall-[team]` slack alias
 func (m *Manager) SyncTeams(ctx context.Context) error {
+	return errors.New("not implemented")
+}
+
+// SyncUsers attempts to download the existing users and create any that do not yet exist.
+// Note: existing data will not be modified in any way.
+func (m *Manager) SyncUsers(ctx context.Context) error {
 	return errors.New("not implemented")
 }
 

@@ -1,4 +1,4 @@
-package teams
+package services
 
 import (
 	"context"
@@ -17,7 +17,7 @@ func TestManager_Get(t *testing.T) {
 	scenarios := []struct {
 		desc                  string
 		configureMockResponse http.HandlerFunc
-		expected              *Team
+		expected              *Service
 		expectErr             bool
 	}{
 		{
@@ -25,15 +25,15 @@ func TestManager_Get(t *testing.T) {
 			configureMockResponse: http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
 				_, _ = resp.Write([]byte(getHappyPathResponse))
 			}),
-			expected: &Team{
-				ID:          "FLINT",
-				Name:        "Flintstones",
+			expected: &Service{
+				ID:          "BOOK",
+				Name:        "The Booking Policy",
 				Description: "",
 			},
 			expectErr: false,
 		},
 		{
-			desc: "sad path - no such team",
+			desc: "sad path - no such service",
 			configureMockResponse: http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
 				_, _ = resp.Write([]byte(`{}`))
 			}),
@@ -61,7 +61,7 @@ func TestManager_Get(t *testing.T) {
 
 			// call object under test
 			manager := New(cfg, logger)
-			result, resultErr := manager.Get(ctx, "FLINT")
+			result, resultErr := manager.Get(ctx, "BOOK")
 
 			// validation
 			require.Equal(t, scenario.expectErr, resultErr != nil, "expected error. err: %s", resultErr)
@@ -74,7 +74,7 @@ func TestManager_GetByName(t *testing.T) {
 	scenarios := []struct {
 		desc                  string
 		configureMockResponse http.HandlerFunc
-		expected              *Team
+		expected              *Service
 		expectErr             bool
 	}{
 		{
@@ -82,15 +82,15 @@ func TestManager_GetByName(t *testing.T) {
 			configureMockResponse: http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
 				_, _ = resp.Write([]byte(listHappyPathResponse))
 			}),
-			expected: &Team{
-				ID:          "FLINT",
-				Name:        "Flintstones",
+			expected: &Service{
+				ID:          "BOOK",
+				Name:        "The Booking Policy",
 				Description: "",
 			},
 			expectErr: false,
 		},
 		{
-			desc: "sad path - no such team",
+			desc: "sad path - no such service",
 			configureMockResponse: http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
 				_, _ = resp.Write([]byte(`{}`))
 			}),
@@ -118,69 +118,7 @@ func TestManager_GetByName(t *testing.T) {
 
 			// call object under test
 			manager := New(cfg, logger)
-			result, resultErr := manager.GetByName(ctx, "FLINT")
-
-			// validation
-			require.Equal(t, scenario.expectErr, resultErr != nil, "expected error. err: %s", resultErr)
-			assert.Equal(t, scenario.expected, result, "expected result")
-		})
-	}
-}
-
-func TestManager_GetMembers(t *testing.T) {
-	scenarios := []struct {
-		desc                  string
-		configureMockResponse http.HandlerFunc
-		expected              []*Member
-		expectErr             bool
-	}{
-		{
-			desc: "happy path",
-			configureMockResponse: http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
-				_, _ = resp.Write([]byte(getMembersHappyPathResponse))
-			}),
-			expected: []*Member{
-				{
-					ID:   "FRED",
-					Role: "responder",
-				},
-				{
-					ID:   "WILMA",
-					Role: "manager",
-				},
-			},
-			expectErr: false,
-		},
-		{
-			desc: "sad path - no members",
-			configureMockResponse: http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
-				_, _ = resp.Write([]byte(`{}`))
-			}),
-			expected:  nil,
-			expectErr: true,
-		},
-	}
-
-	for _, s := range scenarios {
-		scenario := s
-		t.Run(scenario.desc, func(t *testing.T) {
-			// inputs
-			ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
-			defer cancel()
-
-			logger, _ := zap.NewDevelopment()
-
-			// mocks
-			testServer := httptest.NewServer(scenario.configureMockResponse)
-			defer testServer.Close()
-
-			cfg := &testConfig{
-				baseURL: testServer.URL,
-			}
-
-			// call object under test
-			manager := New(cfg, logger)
-			result, resultErr := manager.GetMembers(ctx, "FLINT")
+			result, resultErr := manager.GetByName(ctx, "BOOK")
 
 			// validation
 			require.Equal(t, scenario.expectErr, resultErr != nil, "expected error. err: %s", resultErr)
@@ -202,7 +140,7 @@ func TestManager_Add(t *testing.T) {
 				resp.WriteHeader(http.StatusCreated)
 				_, _ = resp.Write([]byte(addHappyPathResponse))
 			}),
-			expected:  "BEAT",
+			expected:  "BOOK",
 			expectErr: false,
 		},
 		{
@@ -232,9 +170,16 @@ func TestManager_Add(t *testing.T) {
 				baseURL: testServer.URL,
 			}
 
+			newService := &testService{
+				name:               "A",
+				description:        "B",
+				escalationPolicyID: "C",
+				teamID:             "D",
+			}
+
 			// call object under test
 			manager := New(cfg, logger)
-			result, resultErr := manager.Add(ctx, "The Beatles", "The Fab Four!")
+			result, resultErr := manager.Add(ctx, newService)
 
 			// validation
 			require.Equal(t, scenario.expectErr, resultErr != nil, "expected error. err: %s", resultErr)
@@ -243,68 +188,27 @@ func TestManager_Add(t *testing.T) {
 	}
 }
 
-func TestManager_AddMember(t *testing.T) {
-	scenarios := []struct {
-		desc                  string
-		configureMockResponse http.HandlerFunc
-		expectErr             bool
-	}{
-		{
-			desc: "happy path",
-			configureMockResponse: http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
-				resp.WriteHeader(http.StatusNoContent)
-			}),
-			expectErr: false,
-		},
-		{
-			desc: "sad path - system error",
-			configureMockResponse: http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
-				resp.WriteHeader(http.StatusInternalServerError)
-			}),
-			expectErr: true,
-		},
-	}
-
-	for _, s := range scenarios {
-		scenario := s
-		t.Run(scenario.desc, func(t *testing.T) {
-			// inputs
-			ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
-			defer cancel()
-
-			logger, _ := zap.NewDevelopment()
-
-			// mocks
-			testServer := httptest.NewServer(scenario.configureMockResponse)
-			defer testServer.Close()
-
-			cfg := &testConfig{
-				baseURL: testServer.URL,
-			}
-
-			user := &testUser{}
-
-			// call object under test
-			manager := New(cfg, logger)
-			resultErr := manager.AddMember(ctx, "FLINT", user)
-
-			// validation
-			require.Equal(t, scenario.expectErr, resultErr != nil, "expected error. err: %s", resultErr)
-		})
-	}
+type testService struct {
+	name               string
+	description        string
+	escalationPolicyID string
+	teamID             string
 }
 
-type testUser struct {
-	userID string
-	role   string
+func (t *testService) GetName() string {
+	return t.name
 }
 
-func (t *testUser) GetUserID() string {
-	return t.userID
+func (t *testService) GetDescription() string {
+	return t.description
 }
 
-func (t *testUser) GetRole() string {
-	return t.role
+func (t *testService) GetEscalationPolicyID() string {
+	return t.escalationPolicyID
+}
+
+func (t *testService) GetTeamID() string {
+	return t.teamID
 }
 
 type testConfig struct {
@@ -325,49 +229,29 @@ func (t *testConfig) BaseURL() string {
 
 var getHappyPathResponse = `
 {
-  "team": {
-    "id": "FLINT",
-    "name": "Flintstones"
-  }
+ "service": {
+   "id": "BOOK",
+   "name": "The Booking Policy"
+ }
 }
 `
 
 var listHappyPathResponse = `
 {
-  "teams": [
-    {
-      "id": "FLINT",
-      "name": "Flintstones"
-    }
-  ]
-}
-`
-
-var getMembersHappyPathResponse = `
-{
-  "members": [
-    {
-      "user": {
-        "id": "FRED"
-      },
-      "role": "responder"
-    },
-    {
-      "user": {
-        "id": "WILMA"
-      },
-      "role": "manager"
-    }
-  ]
+ "services": [
+   {
+     "id": "BOOK",
+     "name": "The Booking Policy"
+   }
+ ]
 }
 `
 
 var addHappyPathResponse = `
 {
-  "team": {
-    "id": "BEAT",
-    "name": "The Beatles",
-    "description": "The Fab Four!"
-  }
+ "service": {
+   "id": "BOOK",
+   "name": "The Booking Policy"
+ }
 }
 `

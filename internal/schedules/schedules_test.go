@@ -1,4 +1,4 @@
-package teams
+package schedules
 
 import (
 	"context"
@@ -17,7 +17,7 @@ func TestManager_Get(t *testing.T) {
 	scenarios := []struct {
 		desc                  string
 		configureMockResponse http.HandlerFunc
-		expected              *Team
+		expected              *Schedule
 		expectErr             bool
 	}{
 		{
@@ -25,15 +25,26 @@ func TestManager_Get(t *testing.T) {
 			configureMockResponse: http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
 				_, _ = resp.Write([]byte(getHappyPathResponse))
 			}),
-			expected: &Team{
-				ID:          "FLINT",
-				Name:        "Flintstones",
-				Description: "",
+			expected: &Schedule{
+				ID:          "A",
+				Name:        "B",
+				Description: "C",
+				TimeZone:    "D",
+				Teams:       []*team{{ID: "E"}},
+				ScheduleLayers: []*scheduleLayer{
+					{
+						ID:                        "AA",
+						Name:                      "BB",
+						Start:                     time.Date(2020, 1, 1, 1, 23, 0, 0, time.UTC),
+						RotationVirtualStart:      time.Date(2020, 1, 1, 1, 23, 0, 0, time.UTC),
+						RotationTurnLengthSeconds: 123,
+					},
+				},
 			},
 			expectErr: false,
 		},
 		{
-			desc: "sad path - no such team",
+			desc: "sad path - no such service",
 			configureMockResponse: http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
 				_, _ = resp.Write([]byte(`{}`))
 			}),
@@ -61,7 +72,7 @@ func TestManager_Get(t *testing.T) {
 
 			// call object under test
 			manager := New(cfg, logger)
-			result, resultErr := manager.Get(ctx, "FLINT")
+			result, resultErr := manager.Get(ctx, "A")
 
 			// validation
 			require.Equal(t, scenario.expectErr, resultErr != nil, "expected error. err: %s", resultErr)
@@ -74,7 +85,7 @@ func TestManager_GetByName(t *testing.T) {
 	scenarios := []struct {
 		desc                  string
 		configureMockResponse http.HandlerFunc
-		expected              *Team
+		expected              *Schedule
 		expectErr             bool
 	}{
 		{
@@ -82,15 +93,17 @@ func TestManager_GetByName(t *testing.T) {
 			configureMockResponse: http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
 				_, _ = resp.Write([]byte(listHappyPathResponse))
 			}),
-			expected: &Team{
-				ID:          "FLINT",
-				Name:        "Flintstones",
-				Description: "",
+			expected: &Schedule{
+				ID:          "A",
+				Name:        "B",
+				Description: "C",
+				TimeZone:    "D",
+				Teams:       []*team{{ID: "E"}},
 			},
 			expectErr: false,
 		},
 		{
-			desc: "sad path - no such team",
+			desc: "sad path - no such escalation policy",
 			configureMockResponse: http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
 				_, _ = resp.Write([]byte(`{}`))
 			}),
@@ -118,69 +131,7 @@ func TestManager_GetByName(t *testing.T) {
 
 			// call object under test
 			manager := New(cfg, logger)
-			result, resultErr := manager.GetByName(ctx, "FLINT")
-
-			// validation
-			require.Equal(t, scenario.expectErr, resultErr != nil, "expected error. err: %s", resultErr)
-			assert.Equal(t, scenario.expected, result, "expected result")
-		})
-	}
-}
-
-func TestManager_GetMembers(t *testing.T) {
-	scenarios := []struct {
-		desc                  string
-		configureMockResponse http.HandlerFunc
-		expected              []*Member
-		expectErr             bool
-	}{
-		{
-			desc: "happy path",
-			configureMockResponse: http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
-				_, _ = resp.Write([]byte(getMembersHappyPathResponse))
-			}),
-			expected: []*Member{
-				{
-					ID:   "FRED",
-					Role: "responder",
-				},
-				{
-					ID:   "WILMA",
-					Role: "manager",
-				},
-			},
-			expectErr: false,
-		},
-		{
-			desc: "sad path - no members",
-			configureMockResponse: http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
-				_, _ = resp.Write([]byte(`{}`))
-			}),
-			expected:  nil,
-			expectErr: true,
-		},
-	}
-
-	for _, s := range scenarios {
-		scenario := s
-		t.Run(scenario.desc, func(t *testing.T) {
-			// inputs
-			ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
-			defer cancel()
-
-			logger, _ := zap.NewDevelopment()
-
-			// mocks
-			testServer := httptest.NewServer(scenario.configureMockResponse)
-			defer testServer.Close()
-
-			cfg := &testConfig{
-				baseURL: testServer.URL,
-			}
-
-			// call object under test
-			manager := New(cfg, logger)
-			result, resultErr := manager.GetMembers(ctx, "FLINT")
+			result, resultErr := manager.GetByName(ctx, "BOOK")
 
 			// validation
 			require.Equal(t, scenario.expectErr, resultErr != nil, "expected error. err: %s", resultErr)
@@ -202,7 +153,7 @@ func TestManager_Add(t *testing.T) {
 				resp.WriteHeader(http.StatusCreated)
 				_, _ = resp.Write([]byte(addHappyPathResponse))
 			}),
-			expected:  "BEAT",
+			expected:  "A",
 			expectErr: false,
 		},
 		{
@@ -232,9 +183,17 @@ func TestManager_Add(t *testing.T) {
 				baseURL: testServer.URL,
 			}
 
+			newSchedule := &testSchedule{
+				name:        "A",
+				description: "B",
+				timeZone:    "Australia/Melbourne",
+				teamID:      "D",
+				memberIDs:   []string{"E"},
+			}
+
 			// call object under test
 			manager := New(cfg, logger)
-			result, resultErr := manager.Add(ctx, "The Beatles", "The Fab Four!")
+			result, resultErr := manager.Add(ctx, newSchedule)
 
 			// validation
 			require.Equal(t, scenario.expectErr, resultErr != nil, "expected error. err: %s", resultErr)
@@ -243,7 +202,7 @@ func TestManager_Add(t *testing.T) {
 	}
 }
 
-func TestManager_AddMember(t *testing.T) {
+func TestManager_Update(t *testing.T) {
 	scenarios := []struct {
 		desc                  string
 		configureMockResponse http.HandlerFunc
@@ -252,7 +211,15 @@ func TestManager_AddMember(t *testing.T) {
 		{
 			desc: "happy path",
 			configureMockResponse: http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
-				resp.WriteHeader(http.StatusNoContent)
+				if req.Method == http.MethodGet {
+					resp.WriteHeader(http.StatusOK)
+					_, _ = resp.Write([]byte(getHappyPathResponse))
+				}
+
+				if req.Method == http.MethodPut {
+					resp.WriteHeader(http.StatusOK)
+					_, _ = resp.Write([]byte(updateHappyPathResponse))
+				}
 			}),
 			expectErr: false,
 		},
@@ -282,11 +249,17 @@ func TestManager_AddMember(t *testing.T) {
 				baseURL: testServer.URL,
 			}
 
-			user := &testUser{}
+			newSchedule := &testSchedule{
+				name:        "A",
+				description: "B",
+				timeZone:    "Australia/Melbourne",
+				teamID:      "D",
+				memberIDs:   []string{"E"},
+			}
 
 			// call object under test
 			manager := New(cfg, logger)
-			resultErr := manager.AddMember(ctx, "FLINT", user)
+			resultErr := manager.Update(ctx, "FU", newSchedule)
 
 			// validation
 			require.Equal(t, scenario.expectErr, resultErr != nil, "expected error. err: %s", resultErr)
@@ -294,17 +267,32 @@ func TestManager_AddMember(t *testing.T) {
 	}
 }
 
-type testUser struct {
-	userID string
-	role   string
+type testSchedule struct {
+	name        string
+	description string
+	timeZone    string
+	teamID      string
+	memberIDs   []string
 }
 
-func (t *testUser) GetUserID() string {
-	return t.userID
+func (t *testSchedule) GetTimeZone() string {
+	return t.timeZone
 }
 
-func (t *testUser) GetRole() string {
-	return t.role
+func (t *testSchedule) GetMemberIDs() []string {
+	return t.memberIDs
+}
+
+func (t *testSchedule) GetTeamName() string {
+	return t.name
+}
+
+func (t *testSchedule) GetDescription() string {
+	return t.description
+}
+
+func (t *testSchedule) GetTeamID() string {
+	return t.teamID
 }
 
 type testConfig struct {
@@ -325,49 +313,63 @@ func (t *testConfig) BaseURL() string {
 
 var getHappyPathResponse = `
 {
-  "team": {
-    "id": "FLINT",
-    "name": "Flintstones"
+  "schedule": {
+	"id": "A",
+	"name": "B",
+	"description": "C",
+	"time_zone": "D",
+	"teams": [
+	  {
+		"ID": "E"
+	  }
+	],
+	"schedule_layers": [
+	  {
+		"id": "AA",
+		"name": "BB",
+		"start": "2020-01-01T01:23:00Z",
+		"rotation_virtual_start": "2020-01-01T01:23:00Z",
+		"rotation_turn_length_seconds": 123
+	  }
+	]
   }
 }
 `
 
 var listHappyPathResponse = `
 {
-  "teams": [
-    {
-      "id": "FLINT",
-      "name": "Flintstones"
-    }
-  ]
-}
-`
-
-var getMembersHappyPathResponse = `
-{
-  "members": [
-    {
-      "user": {
-        "id": "FRED"
-      },
-      "role": "responder"
-    },
-    {
-      "user": {
-        "id": "WILMA"
-      },
-      "role": "manager"
-    }
-  ]
+ "schedules": [
+   {
+     "id": "A",
+     "name": "B",
+     "description": "C",
+     "time_zone": "D",
+     "teams": [
+        {
+          "ID": "E"
+        }
+     ]
+   }
+ ]
 }
 `
 
 var addHappyPathResponse = `
 {
-  "team": {
-    "id": "BEAT",
-    "name": "The Beatles",
-    "description": "The Fab Four!"
-  }
+ "schedule": {
+   "id": "A",
+   "name": "B",
+   "description": "C"
+ }
+}
+`
+
+var updateHappyPathResponse = `
+{
+ "schedule": {
+   "id": "A",
+   "name": "B",
+   "description": "C"
+ }
 }
 `

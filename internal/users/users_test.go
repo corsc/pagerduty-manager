@@ -13,7 +13,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func TestManager_Get(t *testing.T) {
+func TestManager_GetByEmail(t *testing.T) {
 	scenarios := []struct {
 		desc                  string
 		configureMockResponse http.HandlerFunc
@@ -66,7 +66,7 @@ func TestManager_Get(t *testing.T) {
 
 			// call object under test
 			manager := New(cfg, logger)
-			result, resultErr := manager.Get(ctx, "fu@bar.com")
+			result, resultErr := manager.GetByEmail(ctx, "fu@bar.com")
 
 			// validation
 			require.Equal(t, scenario.expectErr, resultErr != nil, "expected error. err: %s", resultErr)
