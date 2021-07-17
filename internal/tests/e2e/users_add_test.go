@@ -26,7 +26,7 @@ func TestE2EUsers_Add(t *testing.T) {
 
 	user := &testUser{
 		name:     "Gee",
-		email:    "corey.scott@sage42.com",
+		email:    "corey.scott@example.com",
 		timeZone: "Australia/Melbourne",
 		role:     "user",
 	}
@@ -34,11 +34,11 @@ func TestE2EUsers_Add(t *testing.T) {
 
 	// call object under test
 	manager := users.New(cfg, logger)
-	resultUserID, resultErr := manager.Add(ctx, user, timeZone)
+	resultID, resultErr := manager.Add(ctx, user, timeZone)
 
 	// validation
 	require.NoError(t, resultErr)
-	require.NotEmpty(t, resultUserID)
+	require.NotEmpty(t, resultID)
 }
 
 type testUser struct {

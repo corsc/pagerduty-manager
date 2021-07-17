@@ -34,11 +34,11 @@ func TestE2ESchedules_Add(t *testing.T) {
 
 	// call object under test
 	manager := schedules.New(cfg, logger)
-	resultUserID, resultErr := manager.Add(ctx, schedule)
+	resultID, resultErr := manager.Add(ctx, schedule)
 
 	// validation
 	require.NoError(t, resultErr)
-	require.NotEmpty(t, resultUserID)
+	require.NotEmpty(t, resultID)
 }
 
 type testSchedule struct {

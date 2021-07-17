@@ -12,9 +12,10 @@ import (
 )
 
 const (
-	getURI  = "/escalation_policies/%s"
-	listURI = "/escalation_policies"
-	addURI  = "/escalation_policies"
+	getURI    = "/escalation_policies/%s"
+	listURI   = "/escalation_policies"
+	addURI    = "/escalation_policies"
+	updateURI = "/escalation_policies/%s"
 )
 
 var ErrNoSuchPolicy = errors.New("no such escalation policy")
@@ -73,10 +74,8 @@ func (u *Manager) GetByName(ctx context.Context, name string) (*EscalationPolicy
 
 func (u *Manager) Add(ctx context.Context, policy NewPolicy) (string, error) {
 	reqDTO := buildAddRequest(policy)
-
-	leads := addLeads(policy, reqDTO)
-
-	addDeptHeads(policy, leads, reqDTO)
+	addLeads(policy, reqDTO)
+	addDeptHeads(policy, reqDTO)
 
 	respDTO := &addResponse{}
 
@@ -88,13 +87,39 @@ func (u *Manager) Add(ctx context.Context, policy NewPolicy) (string, error) {
 	return respDTO.Policy.ID, nil
 }
 
+func (u *Manager) Update(ctx context.Context, escalationID string, policy NewPolicy) error {
+	prevPolicy, err := u.Get(ctx, escalationID)
+	if err != nil {
+		return fmt.Errorf("failed to update escalation with err: %w", err)
+	}
+
+	reqDTO := buildAddRequest(policy)
+	addLeads(policy, reqDTO)
+	addDeptHeads(policy, reqDTO)
+
+	updateIDs(reqDTO, prevPolicy)
+
+	uri := fmt.Sprintf(updateURI, escalationID)
+
+	err = u.api.Put(ctx, uri, reqDTO)
+	if err != nil {
+		return fmt.Errorf("failed to update policy '%#v' with err: %s", reqDTO, err)
+	}
+
+	return nil
+}
+
+func updateIDs(reqDTO *addRequest, prevPolicy *EscalationPolicy) {
+	reqDTO.Policy.ID = prevPolicy.ID
+}
+
 func buildAddRequest(policy NewPolicy) *addRequest {
 	return &addRequest{
 		Policy: &EscalationPolicy{
-			Name: policy.GetName(),
+			Name: policy.GetTeamName() + " Escalation",
 			EscalationRules: []*escalationRule{
 				{
-					EscalationDelayInMinutes: 10,
+					EscalationDelayInMinutes: 5,
 					Targets: []*escalationTarget{
 						{
 							ID:   policy.GetScheduleID(),
@@ -111,45 +136,51 @@ func buildAddRequest(policy NewPolicy) *addRequest {
 				},
 			},
 			OnCallHandoffNotifications: "always",
-			Description:                "",
+			Description:                policy.GetDescription(),
 		},
 	}
 }
 
-func addLeads(policy NewPolicy, reqDTO *addRequest) *escalationRule {
-	leads := &escalationRule{
-		EscalationDelayInMinutes: 10,
+func addLeads(policy NewPolicy, reqDTO *addRequest) {
+	if len(policy.GetLeadIDs()) == 0 {
+		return
+	}
+
+	rule := &escalationRule{
+		EscalationDelayInMinutes: 5,
 	}
 
 	for _, userID := range policy.GetLeadIDs() {
-		leads.Targets = append(leads.Targets, &escalationTarget{
+		rule.Targets = append(rule.Targets, &escalationTarget{
 			ID:   userID,
 			Type: "user_reference",
 		})
 	}
 
-	reqDTO.Policy.EscalationRules = append(reqDTO.Policy.EscalationRules, leads)
-
-	return leads
+	reqDTO.Policy.EscalationRules = append(reqDTO.Policy.EscalationRules, rule)
 }
 
-func addDeptHeads(policy NewPolicy, leads *escalationRule, reqDTO *addRequest) {
-	deptHeads := &escalationRule{
-		EscalationDelayInMinutes: 10,
+func addDeptHeads(policy NewPolicy, reqDTO *addRequest) {
+	if len(policy.GetDeptHeadsIDs()) == 0 {
+		return
+	}
+
+	rule := &escalationRule{
+		EscalationDelayInMinutes: 5,
 	}
 
 	for _, userID := range policy.GetDeptHeadsIDs() {
-		leads.Targets = append(leads.Targets, &escalationTarget{
+		rule.Targets = append(rule.Targets, &escalationTarget{
 			ID:   userID,
 			Type: "user_reference",
 		})
 	}
 
-	reqDTO.Policy.EscalationRules = append(reqDTO.Policy.EscalationRules, deptHeads)
+	reqDTO.Policy.EscalationRules = append(reqDTO.Policy.EscalationRules, rule)
 }
 
 type NewPolicy interface {
-	GetName() string
+	GetTeamName() string
 	GetDescription() string
 	GetScheduleID() string
 	GetTeamID() string

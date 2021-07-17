@@ -171,13 +171,12 @@ func TestManager_Add(t *testing.T) {
 			}
 
 			newEscalation := &testEscalation{
-				name:               "B",
-				description:        "C",
-				escalationPolicyID: "D",
-				teamID:             "E",
-				scheduleID:         "F",
-				leadIDs:            []string{"G"},
-				deptHeadIDs:        []string{"H"},
+				name:        "B",
+				description: "C",
+				teamID:      "E",
+				scheduleID:  "F",
+				leadIDs:     []string{"G"},
+				deptHeadIDs: []string{"H"},
 			}
 
 			// call object under test
@@ -191,14 +190,84 @@ func TestManager_Add(t *testing.T) {
 	}
 }
 
+func TestManager_Update(t *testing.T) {
+	scenarios := []struct {
+		desc                  string
+		configureMockResponse http.HandlerFunc
+		expected              string
+		expectErr             bool
+	}{
+		{
+			desc: "happy path",
+			configureMockResponse: http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
+				if req.Method == http.MethodGet {
+					resp.WriteHeader(http.StatusOK)
+					_, _ = resp.Write([]byte(getHappyPathResponse))
+				}
+
+				if req.Method == http.MethodPut {
+					resp.WriteHeader(http.StatusOK)
+					_, _ = resp.Write([]byte(updateHappyPathResponse))
+				}
+			}),
+			expected:  "A",
+			expectErr: false,
+		},
+		{
+			desc: "sad path - system error",
+			configureMockResponse: http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
+				resp.WriteHeader(http.StatusInternalServerError)
+			}),
+			expected:  "",
+			expectErr: true,
+		},
+	}
+
+	for _, s := range scenarios {
+		scenario := s
+		t.Run(scenario.desc, func(t *testing.T) {
+			// inputs
+			ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+			defer cancel()
+
+			logger, _ := zap.NewDevelopment()
+
+			// mocks
+			testServer := httptest.NewServer(scenario.configureMockResponse)
+			defer testServer.Close()
+
+			cfg := &testConfig{
+				baseURL: testServer.URL,
+			}
+
+			escalationID := "D"
+
+			newEscalation := &testEscalation{
+				name:        "B",
+				description: "C",
+				teamID:      "E",
+				scheduleID:  "F",
+				leadIDs:     []string{"G"},
+				deptHeadIDs: []string{"H"},
+			}
+
+			// call object under test
+			manager := New(cfg, logger)
+			resultErr := manager.Update(ctx, escalationID, newEscalation)
+
+			// validation
+			require.Equal(t, scenario.expectErr, resultErr != nil, "expected error. err: %s", resultErr)
+		})
+	}
+}
+
 type testEscalation struct {
-	name               string
-	description        string
-	escalationPolicyID string
-	teamID             string
-	scheduleID         string
-	leadIDs            []string
-	deptHeadIDs        []string
+	name        string
+	description string
+	teamID      string
+	scheduleID  string
+	leadIDs     []string
+	deptHeadIDs []string
 }
 
 func (t *testEscalation) GetScheduleID() string {
@@ -213,7 +282,7 @@ func (t *testEscalation) GetDeptHeadsIDs() []string {
 	return t.deptHeadIDs
 }
 
-func (t *testEscalation) GetName() string {
+func (t *testEscalation) GetTeamName() string {
 	return t.name
 }
 
@@ -264,6 +333,16 @@ var listHappyPathResponse = `
 `
 
 var addHappyPathResponse = `
+{
+ "escalation_policy": {
+   "id": "A",
+   "name": "B",
+   "description": "C"
+ }
+}
+`
+
+var updateHappyPathResponse = `
 {
  "escalation_policy": {
    "id": "A",

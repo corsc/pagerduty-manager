@@ -29,7 +29,7 @@ func TestE2ESchedules_Update(t *testing.T) {
 		teamName:  "Sage42",
 		timeZone:  "Australia/Melbourne",
 		teamID:    "PJVN6XK",
-		memberIDs: []string{"PDPIGEC", "PXJHUO9"},
+		memberIDs: []string{"PXJHUO9", "P7X168R"},
 	}
 
 	scheduleID := "PJQM2NF"

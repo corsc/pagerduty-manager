@@ -5,14 +5,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/corsc/pagerduty-manager/internal/teams"
+	"github.com/corsc/pagerduty-manager/internal/escalations"
 
 	"github.com/corsc/go-commons/testing/skip"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 )
 
-func TestE2ETeams_Add(t *testing.T) {
+func TestE2EEscalations_Update(t *testing.T) {
 	skip.IfNotSet(t, "E2E_TEST")
 
 	// inputs
@@ -25,14 +25,20 @@ func TestE2ETeams_Add(t *testing.T) {
 		baseURL: "https://api.pagerduty.com",
 	}
 
-	name := "Sage42"
-	description := "Dev Team"
+	escalationID := "PPJ9DAY"
+
+	escalation := &testEscalation{
+		teamName:     "Sage42",
+		scheduleID:   "PJQM2NF",
+		teamID:       "PJVN6XK",
+		leadIDs:      []string{"PXJHUO9"},
+		deptHeadsIDs: []string{"PDPIGEC"},
+	}
 
 	// call object under test
-	manager := teams.New(cfg, logger)
-	resultID, resultErr := manager.Add(ctx, name, description)
+	manager := escalations.New(cfg, logger)
+	resultErr := manager.Update(ctx, escalationID, escalation)
 
 	// validation
 	require.NoError(t, resultErr)
-	require.NotEmpty(t, resultID)
 }
