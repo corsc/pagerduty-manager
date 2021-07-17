@@ -171,15 +171,18 @@ func TestManager_Add(t *testing.T) {
 			}
 
 			newService := &testService{
-				name:               "A",
-				description:        "B",
-				escalationPolicyID: "C",
-				teamID:             "D",
+				name:        "A",
+				description: "B",
+			}
+
+			newTeam := &testTeam{
+				teamID:             "C",
+				escalationPolicyID: "D",
 			}
 
 			// call object under test
 			manager := New(cfg, logger)
-			result, resultErr := manager.Add(ctx, newService)
+			result, resultErr := manager.Add(ctx, newService, newTeam)
 
 			// validation
 			require.Equal(t, scenario.expectErr, resultErr != nil, "expected error. err: %s", resultErr)
@@ -189,10 +192,8 @@ func TestManager_Add(t *testing.T) {
 }
 
 type testService struct {
-	name               string
-	description        string
-	escalationPolicyID string
-	teamID             string
+	name        string
+	description string
 }
 
 func (t *testService) GetName() string {
@@ -203,11 +204,16 @@ func (t *testService) GetDescription() string {
 	return t.description
 }
 
-func (t *testService) GetEscalationPolicyID() string {
+type testTeam struct {
+	teamID             string
+	escalationPolicyID string
+}
+
+func (t *testTeam) GetEscalationPolicyID() string {
 	return t.escalationPolicyID
 }
 
-func (t *testService) GetTeamID() string {
+func (t *testTeam) GetTeamID() string {
 	return t.teamID
 }
 

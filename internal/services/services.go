@@ -12,9 +12,10 @@ import (
 )
 
 const (
-	getURI  = "/services/%s"
-	listURI = "/services"
-	addURI  = "/services"
+	getURI    = "/services/%s"
+	listURI   = "/services"
+	addURI    = "/services"
+	updateURI = "/services/%s"
 )
 
 var ErrNoSuchService = errors.New("no such service")
@@ -59,7 +60,7 @@ func (u *Manager) GetByName(ctx context.Context, name string) (*Service, error) 
 
 	services := &getServicesResponse{}
 
-	err := u.api.Get(ctx, listURI, nil, services)
+	err := u.api.Get(ctx, listURI, params, services)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get services '%s' with err: %s", name, err)
 	}
@@ -71,29 +72,8 @@ func (u *Manager) GetByName(ctx context.Context, name string) (*Service, error) 
 	return services.Service[0], nil
 }
 
-func (u *Manager) Add(ctx context.Context, service NewService) (string, error) {
-	reqDTO := &addRequest{
-		Service: &Service{
-			Name:        service.GetName(),
-			Description: service.GetDescription(),
-			Status:      "active",
-			EscalationPolicy: &escalationPolicy{
-				ID: service.GetEscalationPolicyID(),
-			},
-			Teams: []*team{
-				{
-					ID: service.GetTeamID(),
-				},
-			},
-			IncidentUrgencyRule: &incidentUrgency{
-				Type: "constant",
-			},
-			AlertCreation: "create_alerts_and_incidents",
-			AlertGroupingParameters: &alertGroupParameters{
-				Type: "intelligent",
-			},
-		},
-	}
+func (u *Manager) Add(ctx context.Context, service NewService, team NewTeam) (string, error) {
+	reqDTO := u.buildAddPayload(service, team)
 
 	respDTO := &addResponse{}
 
@@ -105,11 +85,56 @@ func (u *Manager) Add(ctx context.Context, service NewService) (string, error) {
 	return respDTO.Service.ID, nil
 }
 
+func (u *Manager) buildAddPayload(service NewService, team NewTeam) *addRequest {
+	return &addRequest{
+		Service: &Service{
+			Name:        service.GetName(),
+			Description: service.GetDescription(),
+			Status:      "active",
+			EscalationPolicy: &EscalationPolicy{
+				ID:   team.GetEscalationPolicyID(),
+				Type: "escalation_policy_reference",
+			},
+			Teams: []*Team{
+				{
+					ID: team.GetTeamID(),
+				},
+			},
+			IncidentUrgencyRule: &IncidentUrgency{
+				Type:    "constant",
+				Urgency: "high",
+			},
+			AlertCreation: "create_alerts_and_incidents",
+			AlertGroupingParameters: &AlertGroupParameters{
+				Type: "intelligent",
+			},
+		},
+	}
+}
+
+func (u *Manager) Update(ctx context.Context, serviceID string, service NewService, team NewTeam) error {
+	reqDTO := u.buildAddPayload(service, team)
+
+	reqDTO.Service.ID = serviceID
+
+	uri := fmt.Sprintf(updateURI, serviceID)
+
+	err := u.api.Put(ctx, uri, reqDTO)
+	if err != nil {
+		return fmt.Errorf("failed to update service '%#v' with err: %s", reqDTO, err)
+	}
+
+	return nil
+}
+
 type NewService interface {
 	GetName() string
 	GetDescription() string
-	GetEscalationPolicyID() string
+}
+
+type NewTeam interface {
 	GetTeamID() string
+	GetEscalationPolicyID() string
 }
 
 type getServiceResponse struct {
@@ -126,27 +151,28 @@ type Service struct {
 	Name                    string                `json:"name"`
 	Description             string                `json:"description"`
 	Status                  string                `json:"status"`
-	EscalationPolicy        *escalationPolicy     `json:"escalation_policy"`
-	Teams                   []*team               `json:"teams"`
-	IncidentUrgencyRule     *incidentUrgency      `json:"incident_urgency_rule"`
+	EscalationPolicy        *EscalationPolicy     `json:"escalation_policy"`
+	Teams                   []*Team               `json:"teams"`
+	IncidentUrgencyRule     *IncidentUrgency      `json:"incident_urgency_rule"`
 	AlertCreation           string                `json:"alert_creation"`
-	AlertGroupingParameters *alertGroupParameters `json:"alert_grouping_parameters"`
+	AlertGroupingParameters *AlertGroupParameters `json:"alert_grouping_parameters"`
 }
 
-type escalationPolicy struct {
+type EscalationPolicy struct {
 	ID   string `json:"id"`
 	Type string `json:"type"`
 }
 
-type team struct {
+type Team struct {
 	ID string `json:"id"`
 }
 
-type incidentUrgency struct {
-	Type string `json:"type"`
+type IncidentUrgency struct {
+	Type    string `json:"type"`
+	Urgency string `json:"urgency"`
 }
 
-type alertGroupParameters struct {
+type AlertGroupParameters struct {
 	Type string `json:"type"`
 }
 

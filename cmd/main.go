@@ -36,33 +36,9 @@ func main() {
 		return
 	}
 
-	err = manager.SyncUsers(ctx)
+	err = manager.Sync(ctx)
 	if err != nil {
-		logger.Fatal("failed to sync users", zap.Error(err))
-		return
-	}
-
-	err = manager.SyncTeams(ctx)
-	if err != nil {
-		logger.Fatal("failed to sync teams", zap.Error(err))
-		return
-	}
-
-	err = manager.SyncServices(ctx)
-	if err != nil {
-		logger.Fatal("failed to sync services", zap.Error(err))
-		return
-	}
-
-	err = manager.SyncEscalation(ctx)
-	if err != nil {
-		logger.Fatal("failed to sync escalation policies", zap.Error(err))
-		return
-	}
-
-	err = manager.SyncSchedules(ctx)
-	if err != nil {
-		logger.Fatal("failed to sync on-call schedules", zap.Error(err))
+		logger.Fatal("failed to sync", zap.Error(err))
 		return
 	}
 }
@@ -91,6 +67,14 @@ type config struct {
 	accessToken string
 	filename    string
 	debug       bool
+}
+
+func (c *config) BaseURL() string {
+	return "https://api.pagerduty.com"
+}
+
+func (c *config) AuthToken() string {
+	return os.Getenv("PD_TOKEN")
 }
 
 func (c *config) Debug() bool {

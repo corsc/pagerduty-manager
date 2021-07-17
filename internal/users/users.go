@@ -67,29 +67,30 @@ type NewUser interface {
 	GetName() string
 	GetEmail() string
 	GetTimeZone() string
-	GetRole() string
+	GetUserRole() string
 }
 
 func newNewUserRequest(user NewUser, defaultTimeZone string) *newUserRequest {
+	timeZone := user.GetTimeZone()
+	if timeZone == "" {
+		timeZone = defaultTimeZone
+	}
+
 	out := &newUserRequest{
-		User: userFormat{
+		User: &userFormat{
 			Type:     "user",
 			Name:     user.GetName(),
 			Email:    user.GetEmail(),
-			TimeZone: user.GetTimeZone(),
-			Role:     user.GetRole(),
+			TimeZone: timeZone,
+			Role:     user.GetUserRole(),
 		},
-	}
-
-	if out.User.TimeZone == "" {
-		out.User.TimeZone = defaultTimeZone
 	}
 
 	return out
 }
 
 type newUserRequest struct {
-	User userFormat `json:"user"`
+	User *userFormat `json:"user"`
 }
 
 type newUserResponse struct {
@@ -110,6 +111,7 @@ type listResponse struct {
 }
 
 type User struct {
+	ID    string `json:"id"`
 	Name  string `json:"name"`
 	Email string `json:"email"`
 	Teams []Team `json:"teams"`

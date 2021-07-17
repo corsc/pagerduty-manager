@@ -303,7 +303,7 @@ func (t *testUser) GetUserID() string {
 	return t.userID
 }
 
-func (t *testUser) GetRole() string {
+func (t *testUser) GetTeamRole() string {
 	return t.role
 }
 

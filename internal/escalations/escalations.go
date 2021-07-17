@@ -60,7 +60,7 @@ func (u *Manager) GetByName(ctx context.Context, name string) (*EscalationPolicy
 
 	escalations := &getEscalationPolicyResponse{}
 
-	err := u.api.Get(ctx, listURI, nil, escalations)
+	err := u.api.Get(ctx, listURI, params, escalations)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get escalations '%s' with err: %s", name, err)
 	}

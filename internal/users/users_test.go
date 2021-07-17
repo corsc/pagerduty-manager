@@ -155,7 +155,7 @@ func (t *testUser) GetTimeZone() string {
 	return t.timeZone
 }
 
-func (t *testUser) GetRole() string {
+func (t *testUser) GetUserRole() string {
 	return t.role
 }
 

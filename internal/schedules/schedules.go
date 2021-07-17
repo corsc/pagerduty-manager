@@ -65,7 +65,7 @@ func (u *Manager) GetByName(ctx context.Context, name string) (*Schedule, error)
 
 	schedules := &getScheduleResponse{}
 
-	err := u.api.Get(ctx, listURI, nil, schedules)
+	err := u.api.Get(ctx, listURI, params, schedules)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get schedules '%s' with err: %s", name, err)
 	}
@@ -77,21 +77,21 @@ func (u *Manager) GetByName(ctx context.Context, name string) (*Schedule, error)
 	return schedules.Schedules[0], nil
 }
 
-func (u *Manager) Add(ctx context.Context, schedule ReqSchedule) (string, error) {
-	location, err := time.LoadLocation(schedule.GetTimeZone())
+func (u *Manager) Add(ctx context.Context, schedule ReqSchedule, defaultTimeZone string) (string, error) {
+	location, err := time.LoadLocation(defaultTimeZone)
 	if err != nil {
 		return "", fmt.Errorf("failed to determine location with err: %w", err)
 	}
 
-	if len(schedule.GetMemberIDs()) == 0 {
-		return "", fmt.Errorf("cannot create schedule with no members")
+	if len(schedule.GetResponderIDs()) == 0 {
+		return "", fmt.Errorf("cannot create schedule with no responders")
 	}
 
 	reqDTO := &addRequest{
 		Schedule: &Schedule{
 			Name:        schedule.GetTeamName() + " Schedule",
 			Description: schedule.GetDescription(),
-			TimeZone:    schedule.GetTimeZone(),
+			TimeZone:    defaultTimeZone,
 			Teams: []*team{
 				{
 					ID: schedule.GetTeamID(),
@@ -116,22 +116,22 @@ func (u *Manager) Add(ctx context.Context, schedule ReqSchedule) (string, error)
 	return respDTO.Schedule.ID, nil
 }
 
-func (u *Manager) Update(ctx context.Context, scheduleID string, schedule ReqSchedule) error {
+func (u *Manager) Update(ctx context.Context, scheduleID string, schedule ReqSchedule, defaultTimeZone string) error {
 	scheduleToUpdate, err := u.Get(ctx, scheduleID)
 	if err != nil {
 		return fmt.Errorf("failed to update schedule with err: %w", err)
 	}
 
-	location, err := time.LoadLocation(schedule.GetTimeZone())
+	location, err := time.LoadLocation(defaultTimeZone)
 	if err != nil {
 		return fmt.Errorf("failed to determine location with err: %w", err)
 	}
 
-	if len(schedule.GetMemberIDs()) == 0 {
-		return fmt.Errorf("cannot update schedule with no members")
+	if len(schedule.GetResponderIDs()) == 0 {
+		return fmt.Errorf("cannot update schedule with no responders")
 	}
 
-	updateLayer(scheduleToUpdate, schedule, location)
+	updateLayer(scheduleToUpdate, schedule, defaultTimeZone, location)
 
 	updateMembers(schedule, scheduleToUpdate)
 
@@ -145,10 +145,10 @@ func (u *Manager) Update(ctx context.Context, scheduleID string, schedule ReqSch
 	return nil
 }
 
-func updateLayer(scheduleToUpdate *Schedule, schedule ReqSchedule, location *time.Location) {
+func updateLayer(scheduleToUpdate *Schedule, schedule ReqSchedule, defaultTimeZone string, location *time.Location) {
 	scheduleToUpdate.Name = schedule.GetTeamName() + " Schedule"
 	scheduleToUpdate.Description = schedule.GetDescription()
-	scheduleToUpdate.TimeZone = schedule.GetTimeZone()
+	scheduleToUpdate.TimeZone = defaultTimeZone
 	scheduleToUpdate.Teams = []*team{
 		{
 			ID: schedule.GetTeamID(),
@@ -175,7 +175,14 @@ func updateLayer(scheduleToUpdate *Schedule, schedule ReqSchedule, location *tim
 func updateMembers(schedule ReqSchedule, scheduleToUpdate *Schedule) {
 	var members []*user
 
-	for _, userID := range schedule.GetMemberIDs() {
+	for _, userID := range schedule.GetResponderIDs() {
+		members = append(members, &user{
+			ID:   userID,
+			Type: "user",
+		})
+	}
+
+	for _, userID := range schedule.GetLeadIDs() {
 		members = append(members, &user{
 			ID:   userID,
 			Type: "user",
@@ -188,7 +195,14 @@ func updateMembers(schedule ReqSchedule, scheduleToUpdate *Schedule) {
 func buildMemberLayer(schedule ReqSchedule, location *time.Location) *scheduleLayer {
 	var members []*user
 
-	for _, userID := range schedule.GetMemberIDs() {
+	for _, userID := range schedule.GetResponderIDs() {
+		members = append(members, &user{
+			ID:   userID,
+			Type: "user",
+		})
+	}
+
+	for _, userID := range schedule.GetLeadIDs() {
 		members = append(members, &user{
 			ID:   userID,
 			Type: "user",
@@ -206,8 +220,8 @@ func buildMemberLayer(schedule ReqSchedule, location *time.Location) *scheduleLa
 type ReqSchedule interface {
 	GetTeamName() string
 	GetDescription() string
-	GetTimeZone() string
-	GetMemberIDs() []string
+	GetResponderIDs() []string
+	GetLeadIDs() []string
 	GetTeamID() string
 }
 

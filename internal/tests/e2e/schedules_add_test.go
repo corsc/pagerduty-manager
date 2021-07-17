@@ -25,16 +25,18 @@ func TestE2ESchedules_Add(t *testing.T) {
 		baseURL: "https://api.pagerduty.com",
 	}
 
+	timeZone := "Australia/Melbourne"
+
 	schedule := &testSchedule{
-		teamName:  "Sage42",
-		timeZone:  "Australia/Melbourne",
-		teamID:    "PJVN6XK",
-		memberIDs: []string{"PDPIGEC", "PXJHUO9"},
+		teamName:     "Sage42",
+		teamID:       "PJVN6XK",
+		responderIDs: []string{"PDPIGEC"},
+		leadIDs:      []string{"PXJHUO9"},
 	}
 
 	// call object under test
 	manager := schedules.New(cfg, logger)
-	resultID, resultErr := manager.Add(ctx, schedule)
+	resultID, resultErr := manager.Add(ctx, schedule, timeZone)
 
 	// validation
 	require.NoError(t, resultErr)
@@ -42,19 +44,19 @@ func TestE2ESchedules_Add(t *testing.T) {
 }
 
 type testSchedule struct {
-	teamName    string
-	description string
-	timeZone    string
-	teamID      string
-	memberIDs   []string
+	teamName     string
+	description  string
+	teamID       string
+	responderIDs []string
+	leadIDs      []string
 }
 
-func (t *testSchedule) GetTimeZone() string {
-	return t.timeZone
+func (t *testSchedule) GetResponderIDs() []string {
+	return t.responderIDs
 }
 
-func (t *testSchedule) GetMemberIDs() []string {
-	return t.memberIDs
+func (t *testSchedule) GetLeadIDs() []string {
+	return t.leadIDs
 }
 
 func (t *testSchedule) GetTeamName() string {

@@ -17,13 +17,6 @@ Sample Input JSON:
 	  "name": "[string - required]",
 	  "description": "[string - optional]",
 	  "slack": "[string - required]",
-	  "escalation": {
-		"handover": {
-		  "day": "[string - optional - default Monday]",
-		  "time": "[number - optional - default 12 midday]"
-		},
-		"after": "[number - optional - default 10 minutes]"
-	  },
 	  "members": [
 		{
 		  "name": "[string - required]",

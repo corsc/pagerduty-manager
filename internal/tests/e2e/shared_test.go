@@ -6,6 +6,10 @@ type testConfig struct {
 	baseURL string
 }
 
+func (t *testConfig) Filename() string {
+	return "./test_data/e2e.json"
+}
+
 func (t *testConfig) AuthToken() string {
 	return os.Getenv("PD_TOKEN")
 }

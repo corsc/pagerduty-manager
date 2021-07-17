@@ -25,18 +25,20 @@ func TestE2ESchedules_Update(t *testing.T) {
 		baseURL: "https://api.pagerduty.com",
 	}
 
+	timeZone := "Australia/Melbourne"
+
 	schedule := &testSchedule{
-		teamName:  "Sage42",
-		timeZone:  "Australia/Melbourne",
-		teamID:    "PJVN6XK",
-		memberIDs: []string{"PXJHUO9", "P7X168R"},
+		teamName:     "Sage42",
+		teamID:       "PJVN6XK",
+		responderIDs: []string{"PDPIGEC"},
+		leadIDs:      []string{"PXJHUO9"},
 	}
 
 	scheduleID := "PJQM2NF"
 
 	// call object under test
 	manager := schedules.New(cfg, logger)
-	resultErr := manager.Update(ctx, scheduleID, schedule)
+	resultErr := manager.Update(ctx, scheduleID, schedule, timeZone)
 
 	// validation
 	require.NoError(t, resultErr)

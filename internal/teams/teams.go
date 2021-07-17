@@ -64,7 +64,7 @@ func (u *Manager) GetByName(ctx context.Context, name string) (*Team, error) {
 
 	teams := &getTeamsResponse{}
 
-	err := u.api.Get(ctx, listURI, nil, teams)
+	err := u.api.Get(ctx, listURI, params, teams)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get teams '%s' with err: %s", name, err)
 	}
@@ -127,7 +127,7 @@ func (u *Manager) AddMember(ctx context.Context, teamID string, user User) error
 	uri := fmt.Sprintf(addMemberURI, teamID, user.GetUserID())
 
 	reqDTO := &addMemberRequest{
-		Role: user.GetRole(),
+		Role: user.GetTeamRole(),
 	}
 
 	err := u.api.Put(ctx, uri, reqDTO)
@@ -140,7 +140,7 @@ func (u *Manager) AddMember(ctx context.Context, teamID string, user User) error
 
 type User interface {
 	GetUserID() string
-	GetRole() string
+	GetTeamRole() string
 }
 
 type getTeamResponse struct {

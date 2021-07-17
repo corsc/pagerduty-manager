@@ -60,6 +60,14 @@ type testConfig struct {
 	filename string
 }
 
+func (t *testConfig) BaseURL() string {
+	return ""
+}
+
+func (t *testConfig) AuthToken() string {
+	return ""
+}
+
 func (t *testConfig) Debug() bool {
 	return true
 }

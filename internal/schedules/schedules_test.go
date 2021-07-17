@@ -184,16 +184,17 @@ func TestManager_Add(t *testing.T) {
 			}
 
 			newSchedule := &testSchedule{
-				name:        "A",
-				description: "B",
-				timeZone:    "Australia/Melbourne",
-				teamID:      "D",
-				memberIDs:   []string{"E"},
+				name:         "A",
+				description:  "B",
+				timeZone:     "Australia/Melbourne",
+				teamID:       "D",
+				responderIDs: []string{"E"},
+				leadIDs:      []string{"F"},
 			}
 
 			// call object under test
 			manager := New(cfg, logger)
-			result, resultErr := manager.Add(ctx, newSchedule)
+			result, resultErr := manager.Add(ctx, newSchedule, "Australia/Melbourne")
 
 			// validation
 			require.Equal(t, scenario.expectErr, resultErr != nil, "expected error. err: %s", resultErr)
@@ -250,16 +251,17 @@ func TestManager_Update(t *testing.T) {
 			}
 
 			newSchedule := &testSchedule{
-				name:        "A",
-				description: "B",
-				timeZone:    "Australia/Melbourne",
-				teamID:      "D",
-				memberIDs:   []string{"E"},
+				name:         "A",
+				description:  "B",
+				timeZone:     "Australia/Melbourne",
+				teamID:       "D",
+				responderIDs: []string{"E"},
+				leadIDs:      []string{"F"},
 			}
 
 			// call object under test
 			manager := New(cfg, logger)
-			resultErr := manager.Update(ctx, "FU", newSchedule)
+			resultErr := manager.Update(ctx, "FU", newSchedule, "Australia/Melbourne")
 
 			// validation
 			require.Equal(t, scenario.expectErr, resultErr != nil, "expected error. err: %s", resultErr)
@@ -268,19 +270,24 @@ func TestManager_Update(t *testing.T) {
 }
 
 type testSchedule struct {
-	name        string
-	description string
-	timeZone    string
-	teamID      string
-	memberIDs   []string
+	name         string
+	description  string
+	timeZone     string
+	teamID       string
+	responderIDs []string
+	leadIDs      []string
+}
+
+func (t *testSchedule) GetResponderIDs() []string {
+	return t.responderIDs
+}
+
+func (t *testSchedule) GetLeadIDs() []string {
+	return t.leadIDs
 }
 
 func (t *testSchedule) GetTimeZone() string {
 	return t.timeZone
-}
-
-func (t *testSchedule) GetMemberIDs() []string {
-	return t.memberIDs
 }
 
 func (t *testSchedule) GetTeamName() string {
